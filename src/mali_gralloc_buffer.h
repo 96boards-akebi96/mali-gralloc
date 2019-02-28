@@ -220,6 +220,10 @@ struct private_handle_t
 		void *base;
 		uint64_t padding;
 	};
+	union {
+		void*    pbase;
+		uint64_t padding_pbase;
+	};
 	uint64_t backing_store_id;
 	int backing_store_size;
 	int writeOwner;

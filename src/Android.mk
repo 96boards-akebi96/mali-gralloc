@@ -141,6 +141,7 @@ endif
 LOCAL_C_INCLUDES := $(MALI_LOCAL_PATH) $(MALI_DDK_INCLUDES)
 LOCAL_C_INCLUDES += system/core/libion
 
+
 # General compilation flags
 LOCAL_CFLAGS := -Werror -DLOG_TAG=\"gralloc\" -DPLATFORM_SDK_VERSION=$(PLATFORM_SDK_VERSION)
 

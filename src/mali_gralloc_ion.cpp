@@ -67,6 +67,8 @@ static void mali_gralloc_ion_free_internal(buffer_handle_t *pHandle, uint32_t nu
 static void set_ion_flags(enum ion_heap_type heap_type, uint64_t usage,
                           unsigned int *priv_heap_flag, unsigned int *ion_flags);
 
+#include "asm/ion_uniphier.h"
+
 /*
  *  Identifies a heap and retrieves file descriptor from ION for allocation
  *
@@ -252,6 +254,10 @@ static enum ion_heap_type pick_ion_heap(const mali_gralloc_module * const m, uin
 		{
 			AERR("Protected ION memory is not supported on this platform.");
 		}
+	}
+	else if (usage & GRALLOC_USAGE_HW_FB)
+	{
+		heap_type = (ion_heap_type)ION_HEAP_ID_FB;
 	}
 	else if (!(usage & GRALLOC_USAGE_HW_VIDEO_ENCODER) && (usage & (GRALLOC_USAGE_HW_FB | GRALLOC_USAGE_HW_COMPOSER)))
 	{
