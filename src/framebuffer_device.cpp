@@ -260,15 +260,22 @@ static int init_frame_buffer_locked(struct private_module_t *module)
 	 * Request NUM_BUFFERS screens (at lest 2 for page flipping)
 	 */
 	info.yres_virtual = info.yres * NUM_BUFFERS;
+#if 1
+	finfo.line_length = (info.xres * (info.bits_per_pixel/8));
+#endif /* 1 */
 
 	uint32_t flags = PAGE_FLIP;
 
+#if 0
+	/* SimpleFB is not support page flipping, but we have NUM_BUFFERS screens */
+	/* so I force enabled page flipping */
 	if (ioctl(fd, FBIOPUT_VSCREENINFO, &info) == -1)
 	{
 		info.yres_virtual = info.yres;
 		flags &= ~PAGE_FLIP;
 		AWAR("FBIOPUT_VSCREENINFO failed, page flipping not supported fd: %d", fd);
 	}
+#endif /* 0 */
 
 	if (info.yres_virtual < info.yres * 2)
 	{
@@ -278,10 +285,12 @@ static int init_frame_buffer_locked(struct private_module_t *module)
 		AWAR("page flipping not supported (yres_virtual=%d, requested=%d)", info.yres_virtual, info.yres * 2);
 	}
 
+#if 0
 	if (ioctl(fd, FBIOGET_VSCREENINFO, &info) == -1)
 	{
 		return -errno;
 	}
+#endif /* 0 */
 
 	int refreshRate = 0;
 
@@ -348,10 +357,12 @@ static int init_frame_buffer_locked(struct private_module_t *module)
 		module->dpy_type = MALI_DPY_TYPE_UNKNOWN;
 	}
 
+#if 0
 	if (ioctl(fd, FBIOGET_FSCREENINFO, &finfo) == -1)
 	{
 		return -errno;
 	}
+#endif /* 0 */
 
 	if (finfo.smem_len <= 0)
 	{
@@ -369,7 +380,11 @@ static int init_frame_buffer_locked(struct private_module_t *module)
 	/*
 	 * map the framebuffer
 	 */
+#if 1
+	size_t fbSize = round_up_to_page_size(finfo.line_length * info.yres);
+#else /* 1 */
 	size_t fbSize = round_up_to_page_size(finfo.line_length * info.yres_virtual);
+#endif /* 1 */
 	void *vaddr = mmap(0, fbSize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 
 	if (vaddr == MAP_FAILED)
@@ -513,6 +528,44 @@ static int fb_alloc_framebuffer_locked(mali_gralloc_module *m, uint64_t consumer
 		m->bufferMask = 0;
 	}
 
+#if 1
+	/*
+	 * FIXME: Since simplefb can't treat as CMA buffer, use other CMA buffer
+	 *        instead of simplefb buffer.
+	 */
+	uintptr_t framebufferPaddr = (uintptr_t)m->finfo.smem_start + 0x02000000;
+	// find a free slot
+	for (uint32_t i=0 ; i<numBuffers ; i++)
+	{
+		if ((bufferMask & (1LU<<i)) == 0)
+		{
+			m->bufferMask |= (1LU<<i);
+			break;
+		}
+		/*
+		 * FIXME: Since android use ION-FB buffer with 23bit alignment,
+		 *        start address must be 23bit aligned.
+		 */
+		framebufferPaddr += (framebufferSize + 0x007fffff) & 0xff800000;
+	}
+
+	*byte_stride = GRALLOC_ALIGN(m->finfo.line_length, 64);
+	int ret = fb_alloc_from_ion_module(m, m->info.xres, m->info.yres, *byte_stride,
+										alignedFramebufferSize, consumer_usage, producer_usage, pHandle);
+
+	if (pHandle) {
+		private_handle_t*hnd = (private_handle_t *)*pHandle;
+		hnd->pbase = (void *)framebufferPaddr; // Set Physical Address
+		// ret = gralloc_buffer_attr_allocate( hnd );
+		// if( ret < 0 )
+		// {
+		// 	mali_gralloc_ion_free( hnd );
+		// 	return ret;
+		// }
+	}
+	return ret;
+
+#else /* 1 */
 	uintptr_t framebufferVaddr = (uintptr_t)m->framebuffer->base;
 
 	// find a free slot
@@ -552,6 +605,7 @@ static int fb_alloc_framebuffer_locked(mali_gralloc_module *m, uint64_t consumer
 	*byte_stride = m->finfo.line_length;
 
 	return 0;
+#endif /* 1 */
 }
 
 int fb_alloc_framebuffer(mali_gralloc_module *m, uint64_t consumer_usage, uint64_t producer_usage,

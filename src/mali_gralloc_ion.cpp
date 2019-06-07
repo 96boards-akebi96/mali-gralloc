@@ -56,6 +56,7 @@
 
 static const enum ion_heap_type ION_HEAP_TYPE_INVALID = ((enum ion_heap_type)~0);
 static const enum ion_heap_type ION_HEAP_TYPE_SECURE = (enum ion_heap_type)(((unsigned int)ION_HEAP_TYPE_CUSTOM) + 1);
+static const enum ion_heap_type ION_HEAP_TYPE_FB = (enum ion_heap_type)(((unsigned int)ION_HEAP_TYPE_CUSTOM) + 2);
 
 #if defined(ION_HEAP_SECURE_MASK)
 #if (HEAP_MASK_FROM_TYPE(ION_HEAP_TYPE_SECURE) != ION_HEAP_SECURE_MASK)
@@ -106,7 +107,9 @@ static int alloc_from_ion_heap(mali_gralloc_module *m, uint64_t usage, size_t si
 		 */
 		do
 		{
-			if (heap_type == m->heap_info[i].type)
+			if ((heap_type == ION_HEAP_TYPE_FB &&
+			     !strncmp(m->heap_info[i].name, "framebuffer", 11)) ||
+			    (heap_type == m->heap_info[i].type))
 			{
 				is_heap_matched = true;
 				ret = ion_alloc_fd(m->ion_client, size, 0,
@@ -252,6 +255,10 @@ static enum ion_heap_type pick_ion_heap(const mali_gralloc_module * const m, uin
 		{
 			AERR("Protected ION memory is not supported on this platform.");
 		}
+	}
+	else if (usage & GRALLOC_USAGE_HW_FB)
+	{
+		heap_type = ION_HEAP_TYPE_FB;
 	}
 	else if (!(usage & GRALLOC_USAGE_HW_VIDEO_ENCODER) && (usage & (GRALLOC_USAGE_HW_FB | GRALLOC_USAGE_HW_COMPOSER)))
 	{
