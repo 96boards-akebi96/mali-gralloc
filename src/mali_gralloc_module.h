@@ -18,12 +18,11 @@
 #ifndef MALI_GRALLOC_MODULE_H_
 #define MALI_GRALLOC_MODULE_H_
 
-#include <system/window.h>
 #include <linux/fb.h>
 #include <pthread.h>
 
 #if GRALLOC_USE_LEGACY_ION_API != 1
-#include <ion/ion_4.12.h>
+#include <ion_4.12.h>
 #endif
 
 typedef enum

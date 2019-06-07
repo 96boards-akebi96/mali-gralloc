@@ -28,7 +28,7 @@
 
 #include <ion/ion.h>
 #if GRALLOC_USE_LEGACY_ION_API != 1
-#include <ion/ion_4.12.h>
+#include <ion_4.12.h>
 #include <vector>
 #endif
 #include <sys/ioctl.h>
